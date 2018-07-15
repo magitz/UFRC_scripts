@@ -62,5 +62,4 @@ echo "--------------------------------------------------------------------------
 
 # Notify user that backup ran.
 SUBJECT="$Server_address backup ran"
-BODY=`tail -n10 $Log_file`
-echo $BODY | mail -s "$SUBJECT" "$Email"
+tail -n16 $Log_file | mail -s "$SUBJECT" "$Email"
