@@ -41,6 +41,7 @@ function trap_clean {
     echo -e "$(hostname) caught error on line $LINENO at $(date +%l:%M%p) via script $(basename $0)" | tee -a $Error_file $Log_file
     echo -e "Please see the tail end of $Log_file for additional error details...">> $Error_file
     mail -s "ALERT: Backup Error Caught for $Server_address" "$Email" < $Error_file
+    exit # Exit if error caught.
 }
 
 # Defined trap conditions
