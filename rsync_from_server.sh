@@ -10,6 +10,8 @@
 # Matt Gitzendanner
 #
 # Version 1.0: 07/12/18
+#         1.1: 11/05/18
+#               Adds multiple backup source path support.
 #
 # To run via cron daily:
 # $ crontab -e
@@ -23,8 +25,13 @@
 # Configuration options. Change these as needed.
 ################################################################################
 
-Path_to_backup='/path/on/server/Backup/' #Path to the folder to rsync
-Log_file='rsync_backup.log' #Daily log file name
+# The Backup_list file is a file with one path per line for backing up paths
+# Lines that start with # are comments and are ignored.
+Backup_list='/path/to/file_with_folder(s)_to backup'
+
+Log_file='rsync_backup.log' # Log file name
+Summary_file_prefix='Backup_' # Prefix for summary file. Will have date added.
+
 Error_file='rsync_errors.log'
 Email='email@some.com' #Where to send emails on alert
 Server_address='server.address.some.com' # Original server name or IP
@@ -47,20 +54,36 @@ function trap_clean {
 # Defined trap conditions
 trap trap_clean ERR SIGHUP SIGINT SIGTERM
 
-# rsync options used:
-#   -a archive mode
-#   -z compress
-#   -h human reabable sizes
-#   --stats report rsync stats
-#   -e use ssh
-echo "rsync -azh --stats -e $Server_address:$Path_to_backup $Dest_path >> $Log_file 2>> $Error_file"
-      rsync -azh --stats -e $Server_address:$Path_to_backup $Dest_path >> $Log_file 2>> $Error_file
 
-# Fill log with line for easy reading...
-date >> $Log_file
-echo "--------------------------------------------------------------------------------------------------------------" >> $Log_file
+while IFS= read -r line
+do
+    # Skip comment lines in the Backup_list file
+    if echo $line | egrep -q '^ *#'
+    then
+      continue
+    else
+      Path_to_backup=line
+    fi
+
+    # rsync options used:
+    #   -a archive mode
+    #   -z compress
+    #   -h human reabable sizes
+    #   --stats report rsync stats
+    #   -e use ssh
+    echo "rsync -azh --stats -e $Server_address:$Path_to_backup $Dest_path >> $Log_file 2>> $Error_file"
+    rsync -azh --stats -e $Server_address:$Path_to_backup $Dest_path >> $Log_file 2>> $Error_file
+
+    # Fill log with line for easy reading...
+    date >> $Log_file
+    echo "--------------------------------------------------------------------------------------------------------------" >> $Log_file
+
+    # Write summary to today's log file.
+    echo "Finished rsync of $Path_to_backup" >> $Summary_file_prefix`date +%F`.log
+    tail -n16 $Log_file >> $Summary_file_prefix`date +%F`.log
+    echo "--------------------------------------------------------------------------------------------------------------" >> $Summary_file_prefix`date +%F`.log
 
 
 # Notify user that backup ran.
 SUBJECT="$Server_address backup ran"
-tail -n16 $Log_file | mail -s "$SUBJECT" "$Email"
+cat $Summary_file_prefix`date +%F`.log | mail -s "$SUBJECT" "$Email"
