@@ -79,7 +79,7 @@ do
     #   --stats report rsync stats
     #   -e use ssh
     echo "rsync -azh --stats -e $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file"
-    #rsync -azh --stats -e $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file
+    rsync -azh --stats -e $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file
 
     # Fill log with line for easy reading...
     date >> $Log_file
