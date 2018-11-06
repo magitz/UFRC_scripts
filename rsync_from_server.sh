@@ -26,6 +26,8 @@
 # Configuration options are sourced from a config file.
 Config_file='BU.settings.cfg'
 
+# Read the config file
+source $Config_file
 
 # Handle errors during rsync.
 function trap_clean {
@@ -37,9 +39,6 @@ function trap_clean {
 }
 # Defined trap conditions
 trap trap_clean ERR SIGHUP SIGINT SIGTERM
-
-# Read the config file
-source $Config_file
 
 # Parse the config file
 while IFS= read -r line
