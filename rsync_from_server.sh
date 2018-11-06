@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ################################################################################
-# Script to rsync a folder to a backup server.
-# Currently, this is configured to pull the data to the backup server.
-# In other words, it runs on the backup server and pulls from the source.
+# Script to rsync data between various sources and destinations.
+# The script uses a config file to set some options, including
+#   a list of source and destination servers and paths
 #
 # Sends email notifications of completion.
 #
@@ -11,7 +11,8 @@
 #
 # Version 1.0: 07/12/18
 #         1.1: 11/05/18
-#               Adds multiple backup source path support.
+#               Changes to source config options from file
+#               Allows for multiple source and destination servers/paths
 #
 # To run via cron daily:
 # $ crontab -e
@@ -22,27 +23,11 @@
 ################################################################################
 
 ################################################################################
-# Configuration options. Change these as needed.
-################################################################################
-
-# The Backup_list file is a file with one path per line for backing up paths
-# Lines that start with # are comments and are ignored.
-Backup_list='/path/to/file_with_folder(s)_to backup'
-
-Log_file='rsync_backup.log' # Log file name
-Summary_file_prefix='Backup_' # Prefix for summary file. Will have date added.
-
-Error_file='rsync_errors.log'
-Email='email@some.com' #Where to send emails on alert
-Server_address='server.address.some.com' # Original server name or IP
-Server_user='user' # Username to login to the backup server with
-# Note, you should have the ssh key set so you can login without a password.
-Dest_path='/local/path/Backup/' # Where to store the data on the backup server.
-
-################################################################################
-################################################################################
+# Configuration options are sourced from a config file.
+Config_file='BU.settings.cfg'
 
 
+# Handle errors during rsync.
 function trap_clean {
     # Error handling...
     echo -e "$(hostname) caught error on line $LINENO at $(date +%l:%M%p) via script $(basename $0)" | tee -a $Error_file $Log_file
@@ -50,19 +35,42 @@ function trap_clean {
     mail -s "ALERT: Backup Error Caught for $Server_address" "$Email" < $Error_file
     exit # Exit if error caught.
 }
-
 # Defined trap conditions
 trap trap_clean ERR SIGHUP SIGINT SIGTERM
 
+# Read the config file
+source $Config_file
 
+# Parse the config file
 while IFS= read -r line
 do
-    # Skip comment lines in the Backup_list file
-    if echo $line | egrep -q '^ *#'
+    # Skip comment and blank lines in the Backup_list string
+    if [[ `echo $line | egrep '#'` ]] || [[ -z $line ]]
     then
       continue
     else
-      Path_to_backup=line
+      # Parse the current line of Backup_list
+      backup=($line)
+      server1=${backup[0]}
+      path1=${backup[1]}
+      server2=${backup[2]}
+      path2=${backup[3]}
+    fi
+
+
+    # Set server:path or path for rsync
+    if [[ $server1 == "local" ]]
+    then
+        serverpath1=$path1
+    else
+        serverpath1=$server1:$path1
+    fi
+
+    if [[ $server2 == "local" ]]
+    then
+        serverpath2=$path2
+    else
+        serverpath2=$server2:$path2
     fi
 
     # rsync options used:
@@ -71,8 +79,8 @@ do
     #   -h human reabable sizes
     #   --stats report rsync stats
     #   -e use ssh
-    echo "rsync -azh --stats -e $Server_address:$Path_to_backup $Dest_path >> $Log_file 2>> $Error_file"
-    rsync -azh --stats -e $Server_address:$Path_to_backup $Dest_path >> $Log_file 2>> $Error_file
+    echo "rsync -azh --stats -e $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file"
+    #rsync -azh --stats -e $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file
 
     # Fill log with line for easy reading...
     date >> $Log_file
@@ -83,6 +91,7 @@ do
     tail -n16 $Log_file >> $Summary_file_prefix`date +%F`.log
     echo "--------------------------------------------------------------------------------------------------------------" >> $Summary_file_prefix`date +%F`.log
 
+done <<< "$Backup_list"
 
 # Notify user that backup ran.
 SUBJECT="$Server_address backup ran"
