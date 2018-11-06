@@ -77,16 +77,15 @@ do
     #   -z compress
     #   -h human reabable sizes
     #   --stats report rsync stats
-    #   -e use ssh
-    echo "rsync -azh --stats -e $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file"
-    rsync -azh --stats -e $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file
+    echo "rsync -azh --stats $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file"
+    rsync -azh --stats $serverpath1 $serverpath2 >> $Log_file 2>> $Error_file
 
     # Fill log with line for easy reading...
     date >> $Log_file
     echo "--------------------------------------------------------------------------------------------------------------" >> $Log_file
 
     # Write summary to today's log file.
-    echo "Finished rsync of $Path_to_backup" >> $Summary_file_prefix`date +%F`.log
+    echo "Finished rsync of $serverpath1 to $serverpath2" >> $Summary_file_prefix`date +%F`.log
     tail -n16 $Log_file >> $Summary_file_prefix`date +%F`.log
     echo "--------------------------------------------------------------------------------------------------------------" >> $Summary_file_prefix`date +%F`.log
 
