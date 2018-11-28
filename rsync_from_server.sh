@@ -87,10 +87,9 @@ do
     # Write summary to today's log file.
     echo "Finished rsync of $serverpath1 to $serverpath2" >> $Summary_file_prefix`date +%F`.log
     tail -n16 $Log_file >> $Summary_file_prefix`date +%F`.log
-    echo "--------------------------------------------------------------------------------------------------------------" >> $Summary_file_prefix`date +%F`.log
 
 done <<< "$Backup_list"
 
 # Notify user that backup ran.
-SUBJECT="$Server_address backup ran"
+SUBJECT="rsync_from_server ran on $HOSTNAME"
 cat $Summary_file_prefix`date +%F`.log | mail -s "$SUBJECT" "$Email"
