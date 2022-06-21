@@ -13,6 +13,9 @@
 #         1.1: 11/05/18
 #               Changes to source config options from file
 #               Allows for multiple source and destination servers/paths
+#         1.2: 06/21/22
+#               Move summary file date code before loop to keep multi-day
+#                    runs in the same file.
 #
 # To run via cron daily:
 # $ crontab -e
@@ -28,6 +31,9 @@ Config_file='BU.settings.cfg'
 
 # Read the config file
 source $Config_file
+
+# Set summary file
+Summary_file=$Summary_file_prefix`date +%F`.log
 
 # Handle errors during rsync.
 function trap_clean {
@@ -85,12 +91,12 @@ do
     echo "--------------------------------------------------------------------------------------------------------------" >> $Log_file
 
     # Write summary to today's log file.
-    echo "Finished rsync of $serverpath1 to $serverpath2" >> $Summary_file_prefix`date +%F`.log
-    tail -n16 $Log_file >> $Summary_file_prefix`date +%F`.log
+    echo "Finished rsync of $serverpath1 to $serverpath2" >> $Summary_file
+    tail -n16 $Log_file >> $Summary_file
     echo "--------------------------------------------------------------------------------------------------------------" >> $Summary_file_prefix`date +%F`.log
 
 done <<< "$Backup_list"
 
 # Notify user that backup ran.
 SUBJECT="$Server_address backup ran"
-cat $Summary_file_prefix`date +%F`.log | mail -s "$SUBJECT" "$Email"
+cat $Summary_file | mail -s "$SUBJECT" "$Email"
