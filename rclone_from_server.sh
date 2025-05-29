@@ -14,6 +14,8 @@
 #
 # Version 1.0: 4/11/2024
 #        - Copy from rsync 1.2 version of the script.
+#       1.1: 3/27/2025
+#        - Add option to email via msmtp
 #        
 #
 # To run via cron daily:
@@ -24,7 +26,10 @@
 # That will run this at 5am every day.
 ################################################################################
 
-# On HiPerGator, we need to load the rclone module
+# On HiPerGator, cron jobs need to source /etc/profile.d/modules.sh for 
+# the module system to work. Then we can module laod rclone
+
+source /etc/profile.d/modules.sh
 module load rclone
 
 ################################################################################
@@ -88,4 +93,11 @@ done <<< "$Backup_list"
 
 # Notify user that backup ran.
 SUBJECT="HiPerGator rclone copy ran"
-cat $Log_file | mail -s "$SUBJECT" "$Email"
+
+if [ $mail_tool == 'mail' ]
+then
+    cat $Log_file | mail -s "$SUBJECT" "$Email"
+elif [ $mail_tool == 'msmtp' ]
+then
+   printf "From: $mail_from\nTo: $Email\nSubject: $SUBJECT\n\n $(cat $Log_file) "| msmtp --host=$mail_host --port=$mail_port --from=$mail_from $Email
+fi
